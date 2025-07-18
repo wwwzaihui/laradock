@@ -2258,7 +2258,7 @@ services:
 
   ### keycloak ##################################################
   keycloak:
-    image: bitnami/keycloak:${KEYCLOAK_VERSION}
+    image: bitnami/keycloak:${KEYCLOAK_VERSION:-latest}
     ports:
       - "${KEYCLOAK_HTTP_PORT}:${KEYCLOAK_HTTP_PORT}"
     environment:
@@ -2278,12 +2278,12 @@ services:
       - backend
   ### nexus ##################################################
   nexus:
-    image: sonatype/nexus3:${NEXUS_VERSION}
+    image: sonatype/nexus3:${NEXUS_VERSION:-latest}
     restart: always
     environment:
       - TZ=${WORKSPACE_TIMEZONE}
     ports:
-      - ${NEXUS_HTTP_PORT}:8081
+      - "${NEXUS_HTTP_PORT:-8081}:8081"
     volumes:
       - ${DATA_PATH_HOST}/nexus/data:/nexus-data
     networks:
@@ -2410,7 +2410,7 @@ services:
       - frontend
       - backend
   jupyter:
-    image: continuumio/miniconda3
+    image: continuumio/miniconda3:${MINICONDA_VERSION:-latest}
     ports:
       - "${JUPYTER_PORT:-8888}:8888" # 映射容器内的 8888 端口到主机的 8888 端口
     volumes:
@@ -2435,7 +2435,7 @@ services:
       - backend
   ### TDengine ################################################
   tdengine:
-    image: tdengine/tdengine:latest  # 使用最新版本的TDengine镜像
+    image: tdengine/tdengine:${TDENGINE_VERSION:-latest}  # 使用最新版本的TDengine镜像
     container_name: tdengine_server   # 容器名称
     restart: always                   # 总是重启容器
     environment:
@@ -2449,7 +2449,7 @@ services:
       - ${DATA_PATH_HOST}/tdengine/taosdata:/var/lib/taos        # 数据持久化
       - ${DATA_PATH_HOST}/tdengine/taoslog:/var/log/taos         # 日志持久化
   rmqnamesrv:
-      image: apache/rocketmq:${ROCKETMQ_VERSION}
+      image: apache/rocketmq:${ROCKETMQ_VERSION:-latest}
       container_name: rmqnamesrv
       ports:
         - 9876:9876
@@ -2460,7 +2460,7 @@ services:
         - ${DATA_PATH_HOST}/rmqnamesrv/logs:/home/rocketmq/logs
         - ${DATA_PATH_HOST}/rmqnamesrv/bin/runserver.sh:/home/rocketmq/rocketmq-${ROCKETMQ_VERSION}/bin/runserver.sh
   rmqbroker:
-    image: apache/rocketmq:${ROCKETMQ_VERSION}
+    image: apache/rocketmq:${ROCKETMQ_VERSION:-latest}
     container_name: rmqbroker
     ports:
       - 10909:10909
@@ -2480,7 +2480,7 @@ services:
       - ${DATA_PATH_HOST}/rmqbroker/conf/plain_acl.yml:/home/rocketmq/rocketmq-${ROCKETMQ_VERSION}/conf/plain_acl.yml
       - ${DATA_PATH_HOST}/rmqbroker/bin/runbroker.sh:/home/rocketmq/rocketmq-${ROCKETMQ_VERSION}/bin/runbroker.sh
   rmqproxy:
-    image: apache/rocketmq:${ROCKETMQ_VERSION}
+    image: apache/rocketmq:${ROCKETMQ_VERSION:-latest}
     container_name: rmqproxy
     networks:
       - backend      
