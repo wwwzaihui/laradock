@@ -2,5 +2,11 @@
     "files.associations": {
         ".env.example": "dotenv",
         "Dockerfile-*": "dockerfile"
+    },
+    "jdk.jdkhome": "C:\\Users\\wangc\\AppData\\Local\\mise\\installs\\java\\corretto-8.452.09.1",
+    "java.jdt.ls.java.home": "C:\\Users\\wangc\\AppData\\Local\\mise\\installs\\java\\corretto-8.452.09.1",
+    "java.import.gradle.java.home": "C:\\Users\\wangc\\AppData\\Local\\mise\\installs\\java\\corretto-8.452.09.1",
+    "debug.javascript.defaultRuntimeExecutable": {
+        "pwa-node": "c:\\users\\wangc\\appdata\\local\\mise\\shims\\node"
     }
 }
