@@ -577,9 +577,9 @@ services:
       - backend
 
   ### MySQL ################################################
-  mysql:
+  mysql57:
     restart: always
-    image: "mysql:${MYSQL_VERSION}"
+    image: "mysql:5.7"
     userns_mode: "host"
     # privileged: true
     # [updated]
@@ -599,9 +599,76 @@ services:
       #- ${DATA_PATH_HOST}/mysql:/var/lib/mysql
       #- ${MYSQL_ENTRYPOINT_INITDB}:/docker-entrypoint-initdb.d
       # [NEW]DATA_PATH_HOST
-      - ${DATA_PATH_HOST}/mysql_${MYSQL_VERSION}/conf:/etc/mysql/conf.d
-      - ${DATA_PATH_HOST}/mysql_${MYSQL_VERSION}/log:/var/log/mysql
-      - ${DATA_PATH_HOST}/mysql_${MYSQL_VERSION}/data:/var/lib/mysql
+      - ${DATA_PATH_HOST}/mysql_5.7/conf:/etc/mysql/conf.d
+      - ${DATA_PATH_HOST}/mysql_5.7/log:/var/log/mysql
+      - ${DATA_PATH_HOST}/mysql_5.7/data:/var/lib/mysql
+    env_file:
+      - ./mysql/mysql.env
+    ports:
+      - "${MYSQL_PORT}:3304"
+    networks:
+      - backend
+    # healthcheck:
+    #   test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+    #   interval: 5s
+    #   timeout: 10s
+    #   retries: 10
+  mysql80:
+    restart: always
+    image: "mysql:8.0"
+    userns_mode: "host"
+    # privileged: true
+    # [updated]
+    # build:
+    #   context: ./mysql
+    #   args:
+    #     - MYSQL_VERSION=${MYSQL_VERSION}
+    environment:
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_PASS=${MYSQL_PASSWORD}
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - TZ=${WORKSPACE_TIMEZONE}
+    volumes:
+      # [REMOVE]
+      #- ${DATA_PATH_HOST}/mysql:/var/lib/mysql
+      #- ${MYSQL_ENTRYPOINT_INITDB}:/docker-entrypoint-initdb.d
+      # [NEW]DATA_PATH_HOST
+      - ${DATA_PATH_HOST}/mysql_8.0/conf:/etc/mysql/conf.d
+      - ${DATA_PATH_HOST}/mysql_8.0/log:/var/log/mysql
+      - ${DATA_PATH_HOST}/mysql_8.0/data:/var/lib/mysql
+    env_file:
+      - ./mysql/mysql.env
+    ports:
+      - "${MYSQL_PORT}:3305"
+    networks:
+      - backend
+  mysql:
+    restart: always
+    image: "mysql:8.4"
+    userns_mode: "host"
+    # privileged: true
+    # [updated]
+    # build:
+    #   context: ./mysql
+    #   args:
+    #     - MYSQL_VERSION=${MYSQL_VERSION}
+    environment:
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_PASS=${MYSQL_PASSWORD}
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - TZ=${WORKSPACE_TIMEZONE}
+    volumes:
+      # [REMOVE]
+      #- ${DATA_PATH_HOST}/mysql:/var/lib/mysql
+      #- ${MYSQL_ENTRYPOINT_INITDB}:/docker-entrypoint-initdb.d
+      # [NEW]DATA_PATH_HOST
+      - ${DATA_PATH_HOST}/mysql_8.4/conf:/etc/mysql/conf.d
+      - ${DATA_PATH_HOST}/mysql_8.4/log:/var/log/mysql
+      - ${DATA_PATH_HOST}/mysql_8.4/data:/var/lib/mysql
     env_file:
       - ./mysql/mysql.env
     ports:
@@ -613,7 +680,6 @@ services:
     #   interval: 5s
     #   timeout: 10s
     #   retries: 10
-
   ### Percona ################################################
   percona:
     restart: always
