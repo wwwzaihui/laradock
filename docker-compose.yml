@@ -2506,6 +2506,8 @@ services:
     restart: always                   # 总是重启容器
     environment:
       - TAOS_FQDN=tdengine            # 设置TDengine的完全限定域名
+      - TDENGINE_USER=${TDENGINE_USER:-root}
+      - TDENGINE_PASSWORD=${TDENGINE_PASSWORD:-taosdata}
     ports:
       - "6030-6049:6030-6049"         # 映射端口，包括taosd默认使用的端口范围
     networks:
