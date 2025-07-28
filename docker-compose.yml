@@ -52,7 +52,16 @@ volumes:
     driver: ${VOLUMES_DRIVER}
   react:
     driver: ${VOLUMES_DRIVER}
-
+  # flink:
+  #   driver: ${VOLUMES_DRIVER}
+  # spark:
+  #   driver: ${VOLUMES_DRIVER}
+  #hadoop_namenode:
+  #  driver: ${VOLUMES_DRIVER}
+  #hadoop_datanode:
+  #  driver: ${VOLUMES_DRIVER}
+  # memgraph:
+  #   driver: ${VOLUMES_DRIVER}
 services:
   ### Workspace Utilities ##################################
   workspace:
@@ -333,8 +342,8 @@ services:
       - workspace
     networks:
       - backend
-    links:
-      - docker-in-docker
+
+  
 
   ### PHP Worker ############################################
   php-worker:
@@ -645,6 +654,8 @@ services:
     networks:
       - backend
   mysql:
+    cpus: 0.1
+    mem_limit: 1g
     restart: always
     image: "mysql:8.4"
     userns_mode: "host"
@@ -895,6 +906,8 @@ services:
 
   ### Redis ################################################
   redis:
+    cpus: 0.05
+    mem_limit: 200m
     restart: always
     build: ./redis
     volumes:
@@ -2501,6 +2514,8 @@ services:
       - backend
   ### TDengine ################################################
   tdengine:
+    cpus: 0.05
+    mem_limit: 400m
     image: tdengine/tdengine:${TDENGINE_VERSION:-latest}  # 使用最新版本的TDengine镜像
     container_name: tdengine_server   # 容器名称
     restart: always                   # 总是重启容器
@@ -2517,17 +2532,21 @@ services:
       - ${DATA_PATH_HOST}/tdengine/taosdata:/var/lib/taos        # 数据持久化
       - ${DATA_PATH_HOST}/tdengine/taoslog:/var/log/taos         # 日志持久化
   rmqnamesrv:
-      image: apache/rocketmq:${ROCKETMQ_VERSION:-latest}
-      container_name: rmqnamesrv
-      ports:
-        - 9876:9876
-      networks:
-        - backend       
-      command: sh mqnamesrv
-      volumes:
-        - ${DATA_PATH_HOST}/rmqnamesrv/logs:/home/rocketmq/logs
-        - ${DATA_PATH_HOST}/rmqnamesrv/bin/runserver.sh:/home/rocketmq/rocketmq-${ROCKETMQ_VERSION}/bin/runserver.sh
+    cpus: 0.05
+    mem_limit: 400m
+    image: apache/rocketmq:${ROCKETMQ_VERSION:-latest}
+    container_name: rmqnamesrv
+    ports:
+      - 9876:9876
+    networks:
+      - backend       
+    command: sh mqnamesrv
+    volumes:
+      - ${DATA_PATH_HOST}/rmqnamesrv/logs:/home/rocketmq/logs
+      - ${DATA_PATH_HOST}/rmqnamesrv/bin/runserver.sh:/home/rocketmq/rocketmq-${ROCKETMQ_VERSION}/bin/runserver.sh
   rmqbroker:
+    cpus: 0.05
+    mem_limit: 500m
     image: apache/rocketmq:${ROCKETMQ_VERSION:-latest}
     container_name: rmqbroker
     ports:
@@ -2548,6 +2567,8 @@ services:
       - ${DATA_PATH_HOST}/rmqbroker/conf/plain_acl.yml:/home/rocketmq/rocketmq-${ROCKETMQ_VERSION}/conf/plain_acl.yml
       - ${DATA_PATH_HOST}/rmqbroker/bin/runbroker.sh:/home/rocketmq/rocketmq-${ROCKETMQ_VERSION}/bin/runbroker.sh
   rmqproxy:
+    cpus: 0.05
+    mem_limit: 400m
     image: apache/rocketmq:${ROCKETMQ_VERSION:-latest}
     container_name: rmqproxy
     networks:
@@ -2562,6 +2583,8 @@ services:
       - NAMESRV_ADDR=rmqnamesrv:9876
     command: sh mqproxy
   rmqdashboard:
+    cpus: 0.05
+    mem_limit: 400m
     image: apacherocketmq/rocketmq-dashboard:latest
     container_name: rocketmq-dashboard
     ports:
@@ -2592,4 +2615,294 @@ services:
     command: server
     networks:
       - backend
+  # Neo4j 替代
+  memgraph:
+    cpus: 0.1
+    mem_limit: 600m  
+    image: memgraph/memgraph-platform:latest
+    container_name: memgraph_platform
+    ports:
+      - "7687:7687"
+      - "3000:3000"
+    environment:
+      MEMGRAPH_HOST: 0.0.0.0
+    volumes:
+      - ${DATA_PATH_HOST}/memgraph/data:/var/lib/memgraph
 
+### Apache Flink ########################################
+  flink-jobmanager:
+    cpus: 0.1
+    mem_limit: 300m  
+    image: flink:${FLINK_VERSION:-latest}
+    container_name: flink_jobmanager
+    ports:
+      - "${FLINK_JOBMANAGER_WEB_PORT:-8081}:8081"
+    command: jobmanager
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: jobmanager
+    volumes:
+      - ${DATA_PATH_HOST}/flink/jobmanager:/opt/flink/log
+      - ${APP_CODE_PATH_HOST}:${APP_CODE_PATH_CONTAINER}${APP_CODE_CONTAINER_FLAG}
+    networks:
+      - backend
+      - frontend
+
+  flink-taskmanager:
+    cpus: 0.1
+    mem_limit: 400m  
+    image: flink:${FLINK_VERSION:-latest}
+    container_name: flink_taskmanager
+    depends_on:
+      - flink-jobmanager
+    command: taskmanager
+    scale: ${FLINK_TASKMANAGER_REPLICAS:-1}
+    environment:
+      - | 
+        FLINK_PROPERTIES=jobmanager.rpc.address: flink-jobmanager
+        taskmanager.numberOfTaskSlots: ${FLINK_TASKMANAGER_SLOTS:-2}
+    volumes:
+      - ${DATA_PATH_HOST}/flink/taskmanager:/opt/flink/log
+      - ${APP_CODE_PATH_HOST}:${APP_CODE_PATH_CONTAINER}${APP_CODE_CONTAINER_FLAG}
+    networks:
+      - backend
+
+  ### Flink SQL Gateway ####################################
+  flink-sql-gateway:
+    cpus: 0.1
+    mem_limit: 300m  
+    image: flink:${FLINK_VERSION:-latest}
+    container_name: laradock_flink_sql_gateway
+    command: |
+      bash -c '
+        /opt/flink/bin/sql-gateway.sh start-foreground
+      '
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: flink-jobmanager\n
+        rest.address: flink-jobmanager\n
+        rest.port: 8081\n
+        sql-gateway.endpoint.rest.address: 0.0.0.0\n
+        sql-gateway.endpoint.rest.port: 8083
+    ports:
+      - "${FLINK_SQL_GATEWAY_PORT:-8083}:8083"
+    depends_on:
+      - flink-jobmanager
+    volumes:
+      - ${DATA_PATH_HOST}/flink/sql-gateway:/opt/flink/log
+      - ${APP_CODE_PATH_HOST}:${APP_CODE_PATH_CONTAINER}${APP_CODE_CONTAINER_FLAG}
+    networks:
+      - backend
+
+  ### Apache Spark ########################################
+  spark-master:
+    cpus: 0.1
+    mem_limit: 300m
+    image: bitnami/spark:${SPARK_VERSION:-latest}
+    container_name: laradock_spark_master
+    environment:
+      - SPARK_MODE=master
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
+      - SPARK_USER=spark
+    ports:
+      - "${SPARK_MASTER_WEB_PORT:-8080}:8080"
+      - "${SPARK_MASTER_PORT:-7077}:7077"
+    volumes:
+      - ${DATA_PATH_HOST}/spark:/bitnami/spark
+      - ${APP_CODE_PATH_HOST}:${APP_CODE_PATH_CONTAINER}${APP_CODE_CONTAINER_FLAG}
+    networks:
+      - backend
+
+  spark-worker:
+    cpus: 0.1
+    mem_limit: 400m  
+    image: bitnami/spark:${SPARK_VERSION:-latest}
+    container_name: laradock_spark_worker
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+      - SPARK_WORKER_MEMORY=${SPARK_WORKER_MEMORY:-1G}
+      - SPARK_WORKER_CORES=${SPARK_WORKER_CORES:-1}
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
+      - SPARK_USER=spark
+    depends_on:
+      - spark-master
+    volumes:
+      - ${DATA_PATH_HOST}/spark:/bitnami/spark
+      - ${APP_CODE_PATH_HOST}:${APP_CODE_PATH_CONTAINER}${APP_CODE_CONTAINER_FLAG}
+    networks:
+      - backend
+    links:
+      - docker-in-docker
+  ### Spark SQL ############################################
+  spark-sql:
+    cpus: 0.1
+    mem_limit: 300m
+    image: bitnami/spark:${SPARK_VERSION:-latest}
+    container_name: laradock_spark_sql
+    command: |
+      bash -c '
+        /opt/bitnami/spark/bin/spark-sql \
+          --master spark://spark-master:7077 \
+          --conf spark.sql.warehouse.dir=/opt/bitnami/spark/warehouse \
+          --conf spark.sql.catalogImplementation=hive
+      '
+    environment:
+      - SPARK_MODE=client
+      - SPARK_MASTER_URL=spark://spark-master:7077
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
+      - SPARK_USER=spark
+    depends_on:
+      - spark-master
+    volumes:
+      - ${DATA_PATH_HOST}/spark/sql:/opt/bitnami/spark/warehouse
+      - ${APP_CODE_PATH_HOST}:${APP_CODE_PATH_CONTAINER}${APP_CODE_CONTAINER_FLAG}
+    networks:
+      - backend
+    stdin_open: true
+    tty: true
+
+  ### Hadoop NameNode ####################################
+  hadoop-namenode:
+    cpus: 0.1
+    mem_limit: 300m
+    image: bde2020/hadoop-namenode:${HADOOP_VERSION:-2.0.0-hadoop3.2.1-java8}
+    container_name: hadoop-namenode
+    restart: always
+    ports:
+      - "${HADOOP_NAMENODE_WEB_PORT:-9870}:9870"
+      - "${HADOOP_NAMENODE_PORT:-9000}:9000"
+    volumes:
+      - ${DATA_PATH_HOST}/hadoop/namenode:/hadoop/dfs/name
+      - ${APP_CODE_PATH_HOST}:${APP_CODE_PATH_CONTAINER}${APP_CODE_CONTAINER_FLAG}
+    environment:
+      - CLUSTER_NAME=test
+      - CORE_CONF_fs_defaultFS=hdfs://hadoop-namenode:9000
+      - CORE_CONF_hadoop_http_staticuser_user=root
+      - CORE_CONF_hadoop_proxyuser_hue_hosts=*
+      - CORE_CONF_hadoop_proxyuser_hue_groups=*
+      - CORE_CONF_io_compression_codecs=org.apache.hadoop.io.compress.SnappyCodec
+      - HDFS_CONF_dfs_webhdfs_enabled=true
+      - HDFS_CONF_dfs_permissions_enabled=false
+      - HDFS_CONF_dfs_nameservices=ClusterX
+    networks:
+      - backend
+
+  ### Hadoop DataNode ####################################
+  hadoop-datanode:
+    cpus: 0.1
+    mem_limit: 300m
+    image: bde2020/hadoop-datanode:${HADOOP_VERSION:-2.0.0-hadoop3.2.1-java8}
+    container_name: hadoop-datanode
+    restart: always
+    volumes:
+      - ${DATA_PATH_HOST}/hadoop/datanode:/hadoop/dfs/data
+      - ${APP_CODE_PATH_HOST}:${APP_CODE_PATH_CONTAINER}${APP_CODE_CONTAINER_FLAG}
+    environment:
+      - SERVICE_PRECONDITION=hadoop-namenode:9870
+      - CORE_CONF_fs_defaultFS=hdfs://hadoop-namenode:9000
+      - CORE_CONF_hadoop_http_staticuser_user=root
+      - CORE_CONF_hadoop_proxyuser_hue_hosts=*
+      - CORE_CONF_hadoop_proxyuser_hue_groups=*
+      - CORE_CONF_io_compression_codecs=org.apache.hadoop.io.compress.SnappyCodec
+      - HDFS_CONF_dfs_webhdfs_enabled=true
+      - HDFS_CONF_dfs_permissions_enabled=false
+    depends_on:
+      - hadoop-namenode
+    networks:
+      - backend
+
+  ### Hadoop ResourceManager ############################
+  hadoop-resourcemanager:
+    cpus: 0.1
+    mem_limit: 300m
+    image: bde2020/hadoop-resourcemanager:${HADOOP_VERSION:-2.0.0-hadoop3.2.1-java8}
+    container_name: hadoop-resourcemanager
+    restart: always
+    ports:
+      - "${HADOOP_RESOURCEMANAGER_WEB_PORT:-8088}:8088"
+    environment:
+      - SERVICE_PRECONDITION=hadoop-namenode:9000 hadoop-namenode:9870 hadoop-datanode:9864
+      - CORE_CONF_fs_defaultFS=hdfs://hadoop-namenode:9000
+      - CORE_CONF_hadoop_http_staticuser_user=root
+      - CORE_CONF_hadoop_proxyuser_hue_hosts=*
+      - CORE_CONF_hadoop_proxyuser_hue_groups=*
+      - CORE_CONF_io_compression_codecs=org.apache.hadoop.io.compress.SnappyCodec
+      - YARN_CONF_yarn_log___aggregation___enable=true
+      - YARN_CONF_yarn_log_server_url=http://hadoop-historyserver:8188/applicationhistory/logs/
+      - YARN_CONF_yarn_resourcemanager_recovery_enabled=true
+      - YARN_CONF_yarn_resourcemanager_store_class=org.apache.hadoop.yarn.server.resourcemanager.recovery.FileSystemRMStateStore
+      - YARN_CONF_yarn_resourcemanager_hostname=hadoop-resourcemanager
+      - YARN_CONF_yarn_resourcemanager_address=hadoop-resourcemanager:8032
+      - YARN_CONF_yarn_resourcemanager_scheduler_address=hadoop-resourcemanager:8030
+      - YARN_CONF_yarn_resourcemanager_resource__tracker_address=hadoop-resourcemanager:8031
+    volumes:
+      - ${APP_CODE_PATH_HOST}:${APP_CODE_PATH_CONTAINER}${APP_CODE_CONTAINER_FLAG}
+    depends_on:
+      - hadoop-namenode
+      - hadoop-datanode
+    networks:
+      - backend
+
+  ### Hadoop NodeManager ################################
+  hadoop-nodemanager:
+    cpus: 0.1
+    mem_limit: 300m
+    image: bde2020/hadoop-nodemanager:${HADOOP_VERSION:-2.0.0-hadoop3.2.1-java8}
+    container_name: hadoop-nodemanager
+    restart: always
+    environment:
+      - SERVICE_PRECONDITION=hadoop-namenode:9000 hadoop-namenode:9870 hadoop-datanode:9864 hadoop-resourcemanager:8088
+      - CORE_CONF_fs_defaultFS=hdfs://hadoop-namenode:9000
+      - CORE_CONF_hadoop_http_staticuser_user=root
+      - CORE_CONF_hadoop_proxyuser_hue_hosts=*
+      - CORE_CONF_hadoop_proxyuser_hue_groups=*
+      - CORE_CONF_io_compression_codecs=org.apache.hadoop.io.compress.SnappyCodec
+      - YARN_CONF_yarn_log___aggregation___enable=true
+      - YARN_CONF_yarn_log_server_url=http://hadoop-historyserver:8188/applicationhistory/logs/
+      - YARN_CONF_yarn_resourcemanager_recovery_enabled=true
+      - YARN_CONF_yarn_resourcemanager_store_class=org.apache.hadoop.yarn.server.resourcemanager.recovery.FileSystemRMStateStore
+      - YARN_CONF_yarn_resourcemanager_hostname=hadoop-resourcemanager
+      - YARN_CONF_yarn_resourcemanager_address=hadoop-resourcemanager:8032
+      - YARN_CONF_yarn_resourcemanager_scheduler_address=hadoop-resourcemanager:8030
+      - YARN_CONF_yarn_resourcemanager_resource__tracker_address=hadoop-resourcemanager:8031
+      - YARN_CONF_yarn_nodemanager_aux___services=mapreduce_shuffle
+      - YARN_CONF_yarn_nodemanager_aux___services_mapreduce__shuffle_class=org.apache.hadoop.mapred.ShuffleHandler
+    volumes:
+      - ${APP_CODE_PATH_HOST}:${APP_CODE_PATH_CONTAINER}${APP_CODE_CONTAINER_FLAG}
+    depends_on:
+      - hadoop-namenode
+      - hadoop-datanode
+      - hadoop-resourcemanager
+    networks:
+      - backend
+
+  ### MQTT Broker (Eclipse Mosquitto) ###################
+  mqtt:
+    cpus: 0.05
+    mem_limit: 300m
+    image: eclipse-mosquitto:${MQTT_VERSION:-latest}
+    container_name: mqtt-broker
+    restart: always
+    ports:
+      - "${MQTT_PORT:-1883}:1883"
+      - "${MQTT_WS_PORT:-9001}:9001"
+    volumes:
+      - mosquitto:/mosquitto/data
+      - mosquitto:/mosquitto/log
+      - ./mosquitto/config:/mosquitto/config:ro
+      - ${APP_CODE_PATH_HOST}:${APP_CODE_PATH_CONTAINER}${APP_CODE_CONTAINER_FLAG}
+    networks:
+      - backend
+      - frontend
