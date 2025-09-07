@@ -29,3 +29,4 @@ docker-compose.custom.yml
 /.lh/*
 
 /gitlab/keys
+/_laradock

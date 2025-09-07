@@ -52,10 +52,6 @@ volumes:
     driver: ${VOLUMES_DRIVER}
   react:
     driver: ${VOLUMES_DRIVER}
-  nacos:
-    driver: ${VOLUMES_DRIVER}
-  xxljob:
-    driver: ${VOLUMES_DRIVER}
   # flink:
   #   driver: ${VOLUMES_DRIVER}
   # spark:
@@ -402,43 +398,14 @@ services:
     volumes:
       - ${APP_CODE_PATH_HOST}:${APP_CODE_PATH_CONTAINER}${APP_CODE_CONTAINER_FLAG}
       - ./php-worker/supervisord.d:/etc/supervisord.d
-      
-  ### Nacos ##############################################
-  nacos:
-    image: nacos/nacos-server:${NACOS_VERSION:-latest}
-    container_name: laradock-nacos
-    restart: always
-    environment:
-      - MODE=${NACOS_MODE}
-      - PREFER_HOST_MODE=${NACOS_PREFER_HOST_MODE}
-      - NACOS_AUTH_ENABLE=${NACOS_AUTH_ENABLE}
-      - NACOS_AUTH_TOKEN=${NACOS_AUTH_TOKEN}
-      - NACOS_AUTH_IDENTITY_KEY=${NACOS_AUTH_IDENTITY_KEY}
-      - NACOS_AUTH_IDENTITY_VALUE=${NACOS_AUTH_IDENTITY_VALUE}
-      - JVM_XMS=${NACOS_JVM_XMS}
-      - JVM_XMX=${NACOS_JVM_XMX}
-      - JVM_XMN=${NACOS_JVM_XMN}
-      - JVM_MS=${NACOS_JVM_MS}
-      - JVM_MMS=${NACOS_JVM_MMS}
-      - SPRING_DATASOURCE_PLATFORM=mysql
-      - MYSQL_SERVICE_HOST=mysql
-      - MYSQL_SERVICE_PORT=3306
-      - MYSQL_SERVICE_DB_NAME=nacos_config
-      - MYSQL_SERVICE_USER=root
-      - MYSQL_SERVICE_PASSWORD=123456
-      - MYSQL_SERVICE_DB_PARAM=characterEncoding=utf8&connectTimeout=1000&socketTimeout=3000&autoReconnect=true&useUnicode=true&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
-      - TZ=${WORKSPACE_TIMEZONE}
-    volumes:
-      - nacos:/home/nacos/data
-    ports:
-      - "${NACOS_PORT:-8848}:8848"
-      - "${NACOS_GRPC_PORT:-9848}:9848"
-    networks:
-      - backend
     depends_on:
-      - mysql
+      - workspace
+    environment:
+      - TZ=${WORKSPACE_TIMEZONE}
     extra_hosts:
       - "dockerhost:${DOCKER_HOST_IP}"
+    networks:
+      - backend
   ### Laravel Horizon ############################################
   laravel-horizon:
     restart: always
@@ -649,7 +616,7 @@ services:
     env_file:
       - ./mysql/mysql.env
     ports:
-      - "${MYSQL57_PORT:-3304}:3306"
+      - "3304:3306"
     networks:
       - backend
     # healthcheck:
@@ -687,7 +654,7 @@ services:
     env_file:
       - ./mysql/mysql.env
     ports:
-      - "${MYSQL80_PORT:-3305}:3306"
+      - "3305:3306"
     networks:
       - backend
   mysql:
@@ -2427,7 +2394,54 @@ services:
     networks:
       - frontend
       - backend
-  ### busybox-placeholder ##################################################
+  ### nacos ##################################################
+  nacos:
+    image: nacos/nacos-server:${NACOS_VERSION:-latest}
+    environment:
+      - PREFER_HOST_MODE=hostname
+      - MODE=standalone
+      - SPRING_DATASOURCE_PLATFORM=mysql
+      - MYSQL_SERVICE_HOST=mysql
+      - MYSQL_SERVICE_DB_NAME=nacos_devtest
+      - MYSQL_SERVICE_PORT=3306
+      - MYSQL_SERVICE_USER=${MYSQL_USER}
+      - MYSQL_SERVICE_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_SERVICE_DB_PARAM=characterEncoding=utf8&connectTimeout=1000&socketTimeout=3000&autoReconnect=true&useUnicode=true&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+      - NACOS_AUTH_IDENTITY_KEY=2222
+      - NACOS_AUTH_IDENTITY_VALUE=2xxx
+      - NACOS_AUTH_TOKEN=SecretKey012345678901234567890123456789012345678901234567890123456789
+    volumes:
+      - ${DATA_PATH_HOST}/nacos/standalone-logs/:/home/nacos/logs
+    ports:
+      - "${NACOS_HTTP_PORT:-8848}:8848"
+      - "${NACOS_CLIENT_GRPC_PORT:-9848}:9848"
+      # - "${NACOS_SERVER_GRPC_PORT:-9849}:9849"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    restart: always
+  ### xxljob ##################################################
+  xxljob:
+    image: xuxueli/xxl-job-admin:${XXLJOB_VERSION:-latest}
+    ports:
+      - "${XXLJOB_HTTP_PORT:-8080}:8080"
+    environment:
+      PARAMS: >-
+        --spring.datasource.url=jdbc:mysql://mysql:3306/xxl_job?useUnicode=true&useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&autoReconnect=true&serverTimezone=Asia/Shanghai
+        --spring.datasource.username=${MYSQL_USER}
+        --spring.datasource.password=${MYSQL_PASSWORD}
+        --server.servlet.context-path=/xxl-job-admin
+        --xxl.job.accessToken=default
+    volumes:
+      - ${DATA_PATH_HOST}/xxljob/applogs:/data/applogs
+    restart: always
+    # privileged: true
+    userns_mode: "host"
+    depends_on:
+      - mysql
+    networks:
+      - frontend
+      - backend
   # https://gogs.io/docs/
   gogs:
     image: gogs/gogs:${GOGS_VERSION:-latest}
@@ -3079,7 +3093,7 @@ services:
       - ${DATA_PATH_HOST}pinecone_rag/app//data:/app/data
   ###   qdrant ###################
   qdrant: # [search][向量]
-    image: qdrant/qdrant:${QDRANT_VERSION:-latest}
+    image: qdrant/qdrant:latest
     container_name: qdrant
     restart: always
     ports:
@@ -3108,26 +3122,9 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
-      
-  ###   xxljob ###################
-  xxljob: # [任务调度]
-    image: xuxueli/xxl-job-admin:${XXLJOB_VERSION:-2.3.1}
-    container_name: laradock-xxljob
-    restart: always
-    ports:
-      - "${XXLJOB_PORT:-8800}:8080"
-    environment:
-      - PARAMS=--spring.datasource.url=jdbc:mysql://mysql:3306/xxl_job?useUnicode=true&characterEncoding=UTF-8&autoReconnect=true&serverTimezone=Asia/Shanghai --spring.datasource.username=root --spring.datasource.password=${MYSQL_ROOT_PASSWORD} --xxl.job.accessToken=${XXLJOB_ACCESS_TOKEN:-default_token}
-      - TZ=${WORKSPACE_TIMEZONE}
-    volumes:
-      - xxljob:/data/applogs
-    depends_on:
-      - mysql
-    networks:
-      - backend
 ###   etcd ###################
   etcd:
-    image: quay.io/coreos/etcd:${ETCD_VERSION:-latest}
+    image: quay.io/coreos/etcd:latest
     container_name: milvus-etcd
     restart: always
     environment:
@@ -3147,7 +3144,7 @@ services:
       retries: 3
   ###   milvus ###################
   milvus-standalone: # [search][向量]
-    image: milvusdb/milvus:${MILVUS_VERSION:-latest}
+    image: milvusdb/milvus:latest
     container_name: milvus-standalone
     restart: always
     command: ["milvus", "run", "standalone"]
@@ -3178,7 +3175,7 @@ services:
 
   # 可选：Attu - Milvus GUI管理工具
   milvus-attu:
-    image: zilliz/attu:${ATTU_VERSION:-latest}
+    image: zilliz/attu:latest
     container_name: milvus-attu
     restart: always
     environment:
@@ -3191,7 +3188,7 @@ services:
       - milvus-standalone
   ###   postgres-vector ###################
   postgres-vector: # [TODO]
-    image: pgvector/pgvector:${PGVECOR_VERSION:-pg16}
+    image: pgvector/pgvector:pg16
     container_name: postgres-vector
     restart: always
     environment:
@@ -3239,7 +3236,7 @@ services:
   
   ###   weaviate ###################
   weaviate: # [search][矢量]
-    image: semitechnologies/weaviate:${WEAVIATE_VERSION:-latest}
+    image: semitechnologies/weaviate:latest
     container_name: weaviate
     restart: on-failure:0
     ports:
@@ -3277,7 +3274,7 @@ services:
 
   # 可选：Weaviate Console（Web UI）
   weaviate-console:
-    image: semitechnologies/weaviate-console:${WEAVIATE_CONSOLE_VERSION:-latest}
+    image: semitechnologies/weaviate-console:latest
     container_name: weaviate-console
     restart: always
     ports:
@@ -3292,7 +3289,7 @@ services:
 
   ###   chroma ###################    
   chroma: # [search][矢量]
-    image: chromadb/chroma:${CHROMA_VERSION:-latest}
+    image: chromadb/chroma:latest
     container_name: chromadb
     restart: unless-stopped
     ports:
@@ -3317,21 +3314,3 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
-
-  ###   seata ###################
-  seata:
-    image: apache/seata-server:${SEATA_VERSION:-latest}
-    volumes:
-      - ${DATA_PATH_HOST}/seata/logs:/seata-server/logs
-      - ./seata/config/registry.conf:/seata-server/resources/registry.conf
-      - ./seata/config/file.conf:/seata-server/resources/file.conf
-    environment:
-      - SEATA_PORT=8091
-      - MYSQL_USER=${MYSQL_USER}
-      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
-    ports:
-      - "${SEATA_PORT:-8091}:8091"
-    depends_on:
-      - mysql
-    networks:
-      - backend
