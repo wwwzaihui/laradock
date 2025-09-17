@@ -420,13 +420,13 @@ services:
       - JVM_XMN=${NACOS_JVM_XMN}
       - JVM_MS=${NACOS_JVM_MS}
       - JVM_MMS=${NACOS_JVM_MMS}
-      - SPRING_DATASOURCE_PLATFORM=mysql
-      - MYSQL_SERVICE_HOST=mysql
-      - MYSQL_SERVICE_PORT=3306
-      - MYSQL_SERVICE_DB_NAME=nacos_config
-      - MYSQL_SERVICE_USER=root
-      - MYSQL_SERVICE_PASSWORD=123456
-      - MYSQL_SERVICE_DB_PARAM=characterEncoding=utf8&connectTimeout=1000&socketTimeout=3000&autoReconnect=true&useUnicode=true&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_PLATFORM=${NACOS_SPRING_DATASOURCE_PLATFORM}
+      - MYSQL_SERVICE_HOST=${NACOS_MYSQL_SERVICE_HOST}
+      - MYSQL_SERVICE_PORT=${NACOS_MYSQL_SERVICE_PORT}
+      - MYSQL_SERVICE_DB_NAME=${NACOS_MYSQL_SERVICE_DB_NAME}
+      - MYSQL_SERVICE_USER=${NACOS_MYSQL_SERVICE_USER}
+      - MYSQL_SERVICE_PASSWORD=${NACOS_MYSQL_SERVICE_PASSWORD}
+      - MYSQL_SERVICE_DB_PARAM=${NACOS_MYSQL_SERVICE_DB_PARAM}
       - TZ=${WORKSPACE_TIMEZONE}
     volumes:
       - nacos:/home/nacos/data
@@ -3320,18 +3320,41 @@ services:
 
   ###   seata ###################
   seata:
-    image: apache/seata-server:${SEATA_VERSION:-latest}
-    volumes:
-      - ${DATA_PATH_HOST}/seata/logs:/seata-server/logs
-      - ./seata/config/registry.conf:/seata-server/resources/registry.conf
-      - ./seata/config/file.conf:/seata-server/resources/file.conf
+    image: seataio/seata-server:${SEATA_VERSION:-latest}
     environment:
-      - SEATA_PORT=8091
-      - MYSQL_USER=${MYSQL_USER}
-      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - LOGGING_FILE_PATH=/seata-server/logs    (default= /root/logs/seata)
+      - TZ=Asia/Shanghai
+      # - SEATA_IP=<auto-detect>
+      - SEATA_PORT=${SEATA_PORT}
+      # - STORE_MODE=db  应该从nacos读取配置
+      - SEATA_CONSOLE_ENABLED=false
+      # 注册中心 & 配置中心（Nacos，带鉴权）
+      - SEATA_REGISTRY_TYPE=${SEATA_REGISTRY_TYPE}
+      - SEATA_REGISTRY_NACOS_SERVER_ADDR=${SEATA_REGISTRY_NACOS_SERVER_ADDR}
+      - SEATA_REGISTRY_NACOS_NAMESPACE=${SEATA_REGISTRY_NACOS_NAMESPACE}
+      - SEATA_REGISTRY_NACOS_GROUP=${SEATA_REGISTRY_NACOS_GROUP}
+      - SEATA_REGISTRY_NACOS_APPLICATION=${SEATA_REGISTRY_NACOS_APPLICATION}
+      - SEATA_REGISTRY_NACOS_CLUSTER=${SEATA_REGISTRY_NACOS_CLUSTER}
+      - SEATA_REGISTRY_NACOS_USERNAME=${SEATA_REGISTRY_NACOS_USERNAME}
+      - SEATA_REGISTRY_NACOS_PASSWORD=${SEATA_REGISTRY_NACOS_PASSWORD}
+      - SEATA_CONFIG_TYPE=${SEATA_CONFIG_TYPE}
+      - SEATA_CONFIG_NACOS_SERVER_ADDR=${SEATA_CONFIG_NACOS_SERVER_ADDR}
+      - SEATA_CONFIG_NACOS_NAMESPACE=${SEATA_CONFIG_NACOS_NAMESPACE}
+      - SEATA_CONFIG_NACOS_GROUP=${SEATA_CONFIG_NACOS_GROUP}
+      - SEATA_CONFIG_NACOS_USERNAME=${SEATA_CONFIG_NACOS_USERNAME}
+      - SEATA_CONFIG_NACOS_PASSWORD=${SEATA_CONFIG_NACOS_PASSWORD}
+    volumes:
+      - "./seata-server/ver/${SEATA_VERSION}/resources/application.yml:/seata-server/resources/application.yml"
+      - "./seata-server/logs:/seata-server/logs"
+      # 1.x 需要mysql 驱动8.x,新版本格式,com.mysql.cj.jdbc.Driver.
+      # - "./mysql/libs/mysql-connector-j-8.0.33.jar:/seata-server/libs/mysql-connector-j-8.0.33.jar:ro"
     ports:
+      - "${SEATA_CONSOLE_PORT:-7091}:7091"
       - "${SEATA_PORT:-8091}:8091"
     depends_on:
       - mysql
+      - nacos
     networks:
       - backend
+    extra_hosts:
+      - "dockerhost:${DOCKER_HOST_IP}"

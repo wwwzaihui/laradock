@@ -4,6 +4,16 @@
  
 https://github.com/alibaba/nacos
 
+初始化配置文档的目录 https://github.com/alibaba/nacos/tree/master/distribution/conf
+mysql数据库库初始化： 
+https://github.com/alibaba/nacos/blob/master/distribution/conf/mysql-schema.sql
+
+apache derby数据库库初始化： 
+https://github.com/alibaba/nacos/blob/master/distribution/conf/derby-schema.sql
+
+
+
+
 #### github docker仓库
 https://github.com/nacos-group/nacos-docker
 

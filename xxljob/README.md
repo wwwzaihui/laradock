@@ -32,7 +32,7 @@ CREATE database if NOT EXISTS `xxl_job` default character set utf8mb4 collate ut
 
 启动服务后，可以通过以下地址访问 XXL-JOB 管理平台：
 
-```
+```![1757415577646](image/README/1757415577646.png)
 ![1757252599469](image/README/1757252599469.png)
 ```
 
