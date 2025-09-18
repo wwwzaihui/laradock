@@ -1,0 +1,19 @@
+spring:
+  application:
+    name: mp-pay-service
+  profiles:
+    active: testing
+  cloud:
+    nacos:
+      config:
+        server-addr: ${nacos.config.server:nacos:8848}
+        shared-configs:
+          - refresh: true
+            data-id: config-common.properties
+        refresh: true
+            data-id: seataClient.properties
+        namespace: ${spring.profiles.active}
+        file-extension: properties
+      discovery:
+        server-addr: ${nacos.discovery.server:nacos:8848}
+        namespace: ${spring.profiles.active}
