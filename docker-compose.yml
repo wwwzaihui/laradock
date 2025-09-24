@@ -3358,3 +3358,4 @@ services:
       - backend
     extra_hosts:
       - "dockerhost:${DOCKER_HOST_IP}"
+    restart: unless-stopped
