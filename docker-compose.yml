@@ -206,6 +206,7 @@ services:
       - ./php-worker/supervisord.d:/etc/supervisord.d
     extra_hosts:
       - "dockerhost:${DOCKER_HOST_IP}"
+ 
     ports:
       - "${WORKSPACE_SSH_PORT}:22"
       - "${WORKSPACE_BROWSERSYNC_HOST_PORT}:3000"
@@ -2313,36 +2314,111 @@ services:
     volumes:
       - ./react:/usr/src/app/react
       - /usr/src/app/react/node_modules
+      # ikolaik/python-nodejs:python3.8-nodejs16
+      # nikolaik/python-nodejs:python3.13-nodejs24
+      # vikt3940/python2.7-nodejs14
   hardhat:
-    image: nikolaik/python-nodejs:python3.13-nodejs24
+    image: nikolaik/python-nodejs:python3.11-nodejs18
     volumes:
     # ${DATA_PATH_HOST}
       # 使用的项目属于固定配置,从容器中生成(init),持久化,在下次启动中重新使用
       - ./hardhat/data:/root/data
       # 缓存全局 npm 缓存,目录隔离
       - ${DATA_PATH_HOST}/hardhat/.npm:/root/.npm
-    working_dir: /root/data/hardhat-example
+      - ${DATA_PATH_HOST}/hardhat/.cache/hardhat-nodejs:/root/.cache/hardhat-nodejs
+    working_dir: /root/data
     # 在启动时候开启节点服务 
     # 执行部署任务:
     # npx hardhat ignition deploy ignition/modules/bzz/bzz.ts --network hardhatMainnet --parameters ignition/parameters/local.json --write-localhost-deployment
-    # command: ["sh", "-c", "npm install --prefer-offline --no-audit && npx hardhat node --network metain"]
-    ports:
+    # 查看: hardhat/data/hardhat-example/验证l流程.md
+    # command: ["sh", "-c", "sh ./start.sh"]
+    # rm -rf ./ignition/deployments
+    # 保持容器常驻，便于进入执行命令；首次尝试安装依赖后挂起
+    # command: ["sh", "-c", "npm install --prefer-offline --no-audit || true; tail -f /dev/null"]
+    # ports:
       # HTTP RPC 端口
-      - "${HARDHAT_NODE_PORT:-8545}:8545"
+      # - "${HARDHAT_NODE_PORT:-8545}:8545"
       # 控制台端口
-      - "${HARDHAT_CONSOLE_PORT:-8080}:8080"
+      # - "${HARDHAT_CONSOLE_PORT:-8080}:8080"
     environment:
       # 国内加速配置
       - npm_mirror=https://npmmirror.com/mirrors/npm/
       - node_mirror=https://npmmirror.com/mirrors/node/
-      - NODEJS_ORG_MIRROR=https://npmmirror.com/mirrors/node/ 
+      - NODEJS_ORG_MIRROR=https://npmmirror.com/mirrors/node/
       - TZ=${WORKSPACE_TIMEZONE}
+      - NODE_ENV=local
+      - NETWORK=metain
     networks:
       - frontend
       - backend
     # extra_hosts:
     #   - "dockerhost:${DOCKER_HOST_IP}"
     
+    tty: true
+    stdin_open: true
+  cst-ubuntu:
+    build:
+      context: ./cst-ubuntu
+    env_file:
+      - ./cst-ubuntu/env.properties
+
+    environment:
+      - TZ=${WORKSPACE_TIMEZONE}
+    entrypoint: ["sh", "-c", "tail -f /dev/null"]
+    working_dir: /root
+    volumes:
+      - ${DATA_PATH_HOST}/cst-ubuntu/root/.npm:/root/.npm
+      - ${DATA_PATH_HOST}/cst-ubuntu/root/local_share_mise:/root/.local/share/mise
+      - ${DATA_PATH_HOST}/cst-ubuntu/root/cache_mise:/root/.cache/mise
+      - ${DATA_PATH_HOST}/cst-ubuntu/workspace:/root/workspace
+
+      - Z:\store\download\default\linux_tools:/root/downlads
+    tty: true
+    
+    stdin_open: true
+    networks:
+      - backend
+  ### Geth (Custom Genesis, ChainId 77) ########################
+  geth-custom:
+    image: ethereum/client-go:v1.13.12
+    entrypoint: ["/bin/sh", "-c", "/config/start-geth.sh"]
+    environment:
+      - TZ=${WORKSPACE_TIMEZONE}
+      - GETH_HTTP_PORT=8547
+      - GETH_WS_PORT=8548
+      - GETH_CHAIN_ID=${GETH_CHAIN_ID:-77}
+      - GETH_ACCOUNTS=${GETH_ACCOUNTS:-10}
+      - GETH_DEFAULT_BALANCE=${GETH_DEFAULT_BALANCE:-10000000000000000000000}
+      - GETH_GAS_LIMIT=${GETH_GAS_LIMIT:-30000000}
+    ports:
+      - "${GETH_HTTP_PORT:-8647}:8547"
+      - "${GETH_WS_PORT:-8648}:8548"
+    volumes:
+      - ./geth:/config
+      - ${DATA_PATH_HOST}/geth:/data
+    networks:
+      - backend
+    extra_hosts:
+      - "dockerhost:${DOCKER_HOST_IP}"
+    tty: true
+    stdin_open: true
+  
+  ### Foundry (Anvil/Forge/Cast) ################################
+  foundry:
+    image: ghcr.io/foundry-rs/foundry:latest
+    # 默认不启动测试链，容器常驻以便进入后执行 anvil/forge/cast
+    command: ["sh", "-c", "tail -f /dev/null"]
+    # ports:
+    #   - "${FOUNDRY_ANVIL_PORT:-8548}:${FOUNDRY_ANVIL_PORT:-8548}"
+    environment:
+      - TZ=${WORKSPACE_TIMEZONE}
+    volumes:
+      - ${DATA_PATH_HOST}/foundry/anvil:/data
+    networks:
+      - frontend
+      - backend
+    extra_hosts:
+      - "dockerhost:${DOCKER_HOST_IP}"
     tty: true
     stdin_open: true
   ### kafka ####################################################
@@ -3389,4 +3465,5 @@ services:
       - backend
     extra_hosts:
       - "dockerhost:${DOCKER_HOST_IP}"
-    restart: unless-stopped
+    # restart: unless-stopped
+    restart: always

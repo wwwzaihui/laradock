@@ -33,3 +33,16 @@ tls_version=''
 
 # 激活插件
 mysql_native_password=ON 
+
+
+# Performance
+table_open_cache = 2000
+tmp_table_size = 64M
+max_heap_table_size = 64M
+
+slow_query_log = 1
+long_query_time = 1
+log_queries_not_using_indexes = 1
+log_slow_extra = 1
+slow_query_log_file = /var/log/mysql/slow.log
+log_output = FILE,TABLE

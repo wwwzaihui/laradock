@@ -29,5 +29,6 @@ docker-compose.custom.yml
 /.lh/*
 /gitlab/keys
 /_laradock
+/_docker-images
 **/node_modules/**
 .removed/**
