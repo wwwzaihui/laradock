@@ -71,7 +71,7 @@ volumes:
 services:
   ### Workspace Utilities ##################################
   workspace:
-    restart: always
+    restart: unless-stopped
     build:
       context: ./workspace
       args:
@@ -233,7 +233,7 @@ services:
 
   ### PHP-FPM ##############################################
   php-fpm:
-    restart: always
+    restart: unless-stopped
     build:
       context: ./php-fpm
       args:
@@ -354,7 +354,7 @@ services:
 
   ### PHP Worker ############################################
   php-worker:
-    restart: always
+    restart: unless-stopped
     build:
       context: ./php-worker
       args:
@@ -410,7 +410,7 @@ services:
   nacos:
     image: nacos/nacos-server:${NACOS_VERSION:-latest}
     container_name: laradock-nacos
-    restart: always
+    restart: unless-stopped
     environment:
       - MODE=${NACOS_MODE}
       - PREFER_HOST_MODE=${NACOS_PREFER_HOST_MODE}
@@ -444,7 +444,7 @@ services:
       - "dockerhost:${DOCKER_HOST_IP}"
   ### Laravel Horizon ############################################
   laravel-horizon:
-    restart: always
+    restart: unless-stopped
     build:
       context: ./laravel-horizon
       args:
@@ -499,7 +499,7 @@ services:
 
   ### NGINX Server #########################################
   nginx:
-    restart: always
+    restart: unless-stopped
     build:
       context: ./nginx
       args:
@@ -528,7 +528,7 @@ services:
 
   ### OpenResty Server #########################################
   openresty:
-    restart: always
+    restart: unless-stopped
     build:
       context: ./openresty
       args:
@@ -566,7 +566,7 @@ services:
 
   ### Apache Server ########################################
   apache2:
-    restart: always
+    restart: unless-stopped
     build:
       context: ./apache2
       args:
@@ -592,7 +592,7 @@ services:
 
   ### HHVM #################################################
   hhvm:
-    restart: always
+    restart: unless-stopped
     build: ./hhvm
     volumes:
       - ${APP_CODE_PATH_HOST}:${APP_CODE_PATH_CONTAINER}${APP_CODE_CONTAINER_FLAG}
@@ -606,7 +606,7 @@ services:
 
   ### Minio ################################################
   minio:
-    restart: always
+    restart: unless-stopped
     build: ./minio
     volumes:
       - ${DATA_PATH_HOST}/minio/data:/export
@@ -625,7 +625,7 @@ services:
   mysql57:
     cpus: 0.1
     mem_limit: 1g
-    restart: always
+    restart: unless-stopped
     image: "mysql:5.7"
     userns_mode: "host"
     # privileged: true
@@ -663,7 +663,7 @@ services:
   mysql80:
     cpus: 0.1
     mem_limit: 1g
-    restart: always
+    restart: unless-stopped
     image: "mysql:8.0"
     userns_mode: "host"
     # privileged: true
@@ -696,7 +696,7 @@ services:
   mysql:
     cpus: 0.1
     mem_limit: 1g
-    restart: always
+    restart: unless-stopped
     image: "mysql:8.4"
     userns_mode: "host"
     # privileged: true
@@ -733,7 +733,7 @@ services:
     #   retries: 10
   ### Percona ################################################
   percona:
-    restart: always
+    restart: unless-stopped
     build:
       context: ./percona
     environment:
@@ -751,7 +751,7 @@ services:
 
   ### MSSQL ################################################
   mssql:
-    restart: always
+    restart: unless-stopped
     build:
       context: ./mssql
     environment:
@@ -768,7 +768,7 @@ services:
 
   ### MariaDB ##############################################
   mariadb:
-    restart: always
+    restart: unless-stopped
     build:
       context: ./mariadb
       args:
@@ -792,7 +792,7 @@ services:
 
   ### PostgreSQL ###########################################
   postgres:
-    restart: always
+    restart: unless-stopped
     build:
       context: ./postgres
       args:
@@ -831,9 +831,9 @@ services:
   timescaledb:
     image: timescale/timescaledb:latest-pg18
     container_name: timescaledb
-    restart: always
+    restart: unless-stopped
     ports:
-      - "${PG_PORT}:5432"
+      - "${TIMESCALELEDB_PORT:-5432}:5432"
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
@@ -860,7 +860,7 @@ services:
   questdb:
     image: questdb/questdb
     container_name: custom_questdb
-    restart: always
+    restart: unless-stopped
     ports:
       - "${QDB_PG_PORT:-8812}:8812"
       - "${QDB_HTTP_PORT:-9000}:9000"
@@ -883,7 +883,7 @@ services:
   ### pgbackups PostgreSQL ###########################################
   pgbackups:
     image: prodrigestivill/postgres-backup-local
-    restart: always
+    restart: unless-stopped
     volumes:
       - ../backup:/backups
     links:
@@ -898,7 +898,7 @@ services:
 
   ### PostgreSQL PostGis ###################################
   postgres-postgis:
-    restart: always
+    restart: unless-stopped
     build:
       context: ./postgres-postgis
       args:
@@ -917,7 +917,7 @@ services:
 
   ### Neo4j ################################################
   neo4j:
-    restart: always
+    restart: unless-stopped
     ports:
       - "7401:7474"
       - "7402:7687"
@@ -941,7 +941,7 @@ services:
 
   ### MongoDB ##############################################
   mongo:
-    restart: always
+    restart: unless-stopped
     build: ./mongo
     ports:
       - "${MONGODB_PORT}:27017"
@@ -956,7 +956,7 @@ services:
 
   ### RethinkDB ##############################################
   rethinkdb:
-    restart: always
+    restart: unless-stopped
     build: ./rethinkdb
     ports:
       - "${RETHINKDB_PORT}:8080"
@@ -1000,7 +1000,7 @@ services:
   redis:
     cpus: 0.05
     mem_limit: 200m
-    restart: always
+    restart: unless-stopped
     build: ./redis
     volumes:
       - ${DATA_PATH_HOST}/redis/data:/data
@@ -1012,7 +1012,7 @@ services:
 
   ### Redis Cluster ##########################################
   redis-cluster:
-    restart: always
+    restart: unless-stopped
     build: ./redis-cluster
     ports:
       - "${REDIS_CLUSTER_PORT_RANGE}:7000-7005"
@@ -1020,7 +1020,7 @@ services:
       - backend
   ### SSDB ################################################
   ssdb:
-    restart: always
+    restart: unless-stopped
     build: ./ssdb
     volumes:
       - ${DATA_PATH_HOST}/ssdb:/data
@@ -1031,7 +1031,7 @@ services:
 
   ### ZooKeeper #########################################
   zookeeper:
-    restart: always
+    restart: unless-stopped
     build: ./zookeeper
     volumes:
       - ${DATA_PATH_HOST}/zookeeper/data:/data
@@ -1043,7 +1043,7 @@ services:
 
   ### Aerospike ##########################################
   aerospike:
-    restart: always
+    restart: unless-stopped
     build: ./aerospike
     volumes:
       - workspace
@@ -1062,7 +1062,7 @@ services:
 
   ### Memcached ############################################
   memcached:
-    restart: always
+    restart: unless-stopped
     build: ./memcached
     volumes:
       - ${DATA_PATH_HOST}/memcached:/var/lib/memcached
@@ -1075,7 +1075,7 @@ services:
 
   ### Beanstalkd ###########################################
   beanstalkd:
-    restart: always
+    restart: unless-stopped
     build: ./beanstalkd
     ports:
       - "${BEANSTALKD_HOST_PORT}:11300"
@@ -1088,7 +1088,7 @@ services:
 
   ### SQS #############################################
   sqs:
-    restart: always
+    restart: unless-stopped
     build: ./sqs
     ports:
       - "${SQS_NODE_HOST_PORT}:9324"
@@ -1104,7 +1104,7 @@ services:
 
   ### RabbitMQ #############################################
   rabbitmq:
-    restart: always
+    restart: unless-stopped
     build: ./rabbitmq
     ports:
       - "${RABBITMQ_NODE_HOST_PORT}:5672"
@@ -1125,7 +1125,7 @@ services:
 
   ### Mercure #############################################
   mercure:
-    restart: always
+    restart: unless-stopped
     build: ./mercure
     ports:
       - "${MERCURE_NODE_HOST_HTTP_PORT}:80"
@@ -1145,7 +1145,7 @@ services:
 
   ### Cassandra ############################################
   cassandra:
-    restart: always
+    restart: unless-stopped
     build: ./cassandra
     ports:
       - "${CASSANDRA_TRANSPORT_PORT_NUMBER}:7000"
@@ -1179,7 +1179,7 @@ services:
 
   ### Gearman ############################################
   gearman:
-    restart: always
+    restart: unless-stopped
     build: ./gearman
     ports:
       - "${GEARMAN_PORT}:4730"
@@ -1214,7 +1214,7 @@ services:
 
   ### Beanstalkd Console ###################################
   beanstalkd-console:
-    restart: always
+    restart: unless-stopped
     build: ./beanstalkd-console
     ports:
       - "${BEANSTALKD_CONSOLE_HOST_PORT}:2080"
@@ -1225,7 +1225,7 @@ services:
 
   ### Caddy Server #########################################
   caddy:
-    restart: always
+    restart: unless-stopped
     build: ./caddy
     volumes:
       - ${APP_CODE_PATH_HOST}:${APP_CODE_PATH_CONTAINER}${APP_CODE_CONTAINER_FLAG}
@@ -1243,7 +1243,7 @@ services:
 
   ### phpMyAdmin ###########################################
   phpmyadmin:
-    restart: always
+    restart: unless-stopped
     build: ./phpmyadmin
     environment:
       - PMA_ARBITRARY=1
@@ -1263,7 +1263,7 @@ services:
 
   ### Adminer ###########################################
   adminer:
-    restart: always
+    restart: unless-stopped
     build:
       context: ./adminer
       args:
@@ -1282,7 +1282,7 @@ services:
 
   ### pgAdmin ##############################################
   pgadmin:
-    restart: always
+    restart: unless-stopped
     image: dpage/pgadmin4:latest
     environment:
       - "PGADMIN_DEFAULT_EMAIL=${PGADMIN_DEFAULT_EMAIL}"
@@ -1312,7 +1312,7 @@ services:
 
   ### ElasticSearch ########################################
   elasticsearch:
-    restart: always
+    restart: unless-stopped
     build:
       context: ./elasticsearch
       args:
@@ -1348,7 +1348,7 @@ services:
 
   ### Logstash ##############################################
   logstash:
-    restart: always
+    restart: unless-stopped
     build:
       context: ./logstash
       args:
@@ -1370,7 +1370,7 @@ services:
 
   ### Kibana ##############################################
   kibana:
-    restart: always
+    restart: unless-stopped
     build:
       context: ./kibana
       args:
@@ -1385,7 +1385,7 @@ services:
 
   ### Dejavu ##############################################
   dejavu:
-    restart: always
+    restart: unless-stopped
     build:
       context: ./dejavu
     ports:
@@ -1411,7 +1411,7 @@ services:
 
   ### MailCatcher ################################################
   mailcatcher:
-    restart: always
+    restart: unless-stopped
     build: ./mailcatcher
     ports:
       - "1025:1025"
@@ -1422,7 +1422,7 @@ services:
 
   ### Mailhog ################################################
   mailhog:
-    restart: always
+    restart: unless-stopped
     build: ./mailhog
     ports:
       - "1025:1025"
@@ -1433,7 +1433,7 @@ services:
 
   ### MailDev ##############################################
   maildev:
-    restart: always
+    restart: unless-stopped
     build: ./maildev
     ports:
       - "${MAILDEV_HTTP_PORT}:80"
@@ -1444,7 +1444,7 @@ services:
 
   ### Mailpit ##############################################
   mailpit:
-    restart: always
+    restart: unless-stopped
     build: ./mailpit
     ports:
       - "${MAILPIT_HTTP_PORT}:8025"
@@ -1455,7 +1455,7 @@ services:
 
   ### Selenium ###############################################
   selenium:
-    restart: always
+    restart: unless-stopped
     build: ./selenium
     ports:
       - "${SELENIUM_PORT}:4444"
@@ -1466,7 +1466,7 @@ services:
 
   ### Varnish ##########################################
   proxy:
-    restart: always
+    restart: unless-stopped
     container_name: proxy
     build: ./varnish
     expose:
@@ -1508,7 +1508,7 @@ services:
 
   ### HAProxy ####################################
   haproxy:
-    restart: always
+    restart: unless-stopped
     build: ./haproxy
     ports:
       - "${HAPROXY_HOST_HTTP_PORT}:8085"
@@ -1520,7 +1520,7 @@ services:
 
   ### Jenkins ###################################################
   jenkins:
-    restart: always
+    restart: unless-stopped
     build: ./jenkins
     environment:
       JAVA_OPTS: "-Djava.awt.headless=true"
@@ -1538,7 +1538,7 @@ services:
 
   ### Grafana ################################################
   grafana:
-    restart: always
+    restart: unless-stopped
     build:
       context: ./grafana
     volumes:
@@ -1550,7 +1550,7 @@ services:
 
   ### Graylog #######################################
   graylog:
-    restart: always
+    restart: unless-stopped
     build: ./graylog
     environment:
       - GRAYLOG_PASSWORD_SECRET=${GRAYLOG_PASSWORD}
@@ -1581,7 +1581,7 @@ services:
 
   ### Laravel Echo Server #######################################
   laravel-echo-server:
-    restart: always
+    restart: unless-stopped
     build:
       context: ./laravel-echo-server
       args:
@@ -1598,7 +1598,7 @@ services:
 
   ### Solr ################################################
   solr: # [search]
-    restart: always
+    restart: unless-stopped
     build:
       context: ./solr
       args:
@@ -1614,7 +1614,7 @@ services:
 
   ### Thumbor #########################################
   thumbor:
-    restart: always
+    restart: unless-stopped
     build: ./thumbor
     volumes:
       - ${DATA_PATH_HOST}/thumbor/data:/data
@@ -1731,7 +1731,7 @@ services:
 
   ### AWS EB-CLI ################################################
   aws:
-    restart: always
+    restart: unless-stopped
     build:
       context: ./aws-eb-cli
     volumes:
@@ -1742,7 +1742,7 @@ services:
 
   ### Portainer ################################################
   portainer:
-    restart: always
+    restart: unless-stopped
     build:
       context: ./portainer
     volumes:
@@ -1801,11 +1801,11 @@ services:
     volumes:
       - ${DATA_PATH_HOST}/gitlab/runner:/etc/gitlab-runner
       # - /var/run/docker.sock:/var/run/docker.sock:rw
-    restart: always
+    restart: unless-stopped
 
   ### JupyterHub #########################################
   jupyterhub:
-    restart: always
+    restart: unless-stopped
     build:
       context: ./jupyterhub
     depends_on:
@@ -1841,7 +1841,7 @@ services:
 
   ### IPython #########################################
   ipython-controller:
-    restart: always
+    restart: unless-stopped
     build:
       context: ./ipython
       dockerfile: Dockerfile.controller
@@ -1862,7 +1862,7 @@ services:
 
   ### Docker-in-Docker ################################################
   docker-in-docker:
-    restart: always
+    restart: unless-stopped
     image: docker:20.10-dind
     environment:
       DOCKER_TLS_SAN: DNS:docker-in-docker
@@ -1878,7 +1878,7 @@ services:
 
   ### NetData ################################################
   netdata:
-    restart: always
+    restart: unless-stopped
     image: netdata/netdata:latest
     cap_add:
       - SYS_PTRACE
@@ -1893,7 +1893,7 @@ services:
 
   ### REDISWEBUI ################################################
   redis-webui:
-    restart: always
+    restart: unless-stopped
     build:
       context: ./redis-webui
     environment:
@@ -1911,7 +1911,7 @@ services:
 
   ### MongoWebUI ################################################
   mongo-webui:
-    restart: always
+    restart: unless-stopped
     build:
       context: ./mongo-webui
     environment:
@@ -1929,7 +1929,7 @@ services:
 
   ### Metabase #################################################
   metabase:
-    restart: always
+    restart: unless-stopped
     image: metabase/metabase:latest
     environment:
       - MB_DB_FILE=/metabase-data/${METABASE_DB_FILE}
@@ -2309,7 +2309,7 @@ services:
   confluence:
     container_name: Confluence
     image: atlassian/confluence-server:${CONFLUENCE_VERSION}
-    restart: always
+    restart: unless-stopped
     ports:
       - "${CONFLUENCE_HOST_HTTP_PORT}:8090"
     networks:
@@ -2350,7 +2350,7 @@ services:
     volumes:
       - ${DATA_PATH_HOST}/tomcat/webapps:/usr/local/tomcat/webapps
       - ${DATA_PATH_HOST}/tomcat/logs:/usr/local/tomcat/logs
-    # restart: always
+    # restart: unless-stopped
 
   ### react #####################################################
   react:
@@ -2531,7 +2531,7 @@ services:
     networks:
       - frontend
       - backend
-    restart: always
+    restart: unless-stopped
 
   ### keycloak ##################################################
   keycloak:
@@ -2556,7 +2556,7 @@ services:
   ### nexus ##################################################
   nexus:
     image: sonatype/nexus3:${NEXUS_VERSION:-latest}
-    restart: always
+    restart: unless-stopped
     environment:
       - TZ=${WORKSPACE_TIMEZONE}
     ports:
@@ -2569,7 +2569,7 @@ services:
   ### kvrocks ##################################################
   kvrocks:
     image: apache/kvrocks:${KVROCKS_VERSION:-nightly}
-    restart: always
+    restart: unless-stopped
     environment:
       - TZ=${WORKSPACE_TIMEZONE}
       - KVROCKS_BIND=0.0.0.0
@@ -2586,7 +2586,7 @@ services:
   ### busybox ##################################################
   busybox:
     image: busybox:${BUSYBOX_VERSION:-latest}
-    restart: always
+    restart: unless-stopped
     environment:
       - TZ=${WORKSPACE_TIMEZONE}
     networks:
@@ -2604,7 +2604,7 @@ services:
     environment:
       - USER_UID=1000
       - USER_GID=1000
-    restart: always
+    restart: unless-stopped
     networks:
       - frontend
       - backend
@@ -2627,7 +2627,7 @@ services:
       - DRONE_DATABASE_DRIVER=sqlite3 # 或者 postgres/mysql
       - DRONE_DATABASE_DATASOURCE=/var/lib/drone/drone.sqlite # SQLite 数据库路径
       - DRONE_USER_CREATE=username:admin,admin:true,machine:false,token:your-admin-token # 创建初始管理员用户
-    restart: always
+    restart: unless-stopped
     networks:
       - frontend
       - backend
@@ -2639,7 +2639,7 @@ services:
       - DRONE_RPC_SECRET=${DRONE_RPC_SECRET:-super-duper-secret} # 必须与 server 的 secret 相匹配
       - DRONE_RUNNER_NAME=docker-runner
       - DRONE_SERVER=ws://drone-server:9000/ws/broker # 连接至 Drone Server 的 WebSocket 地址
-    restart: always
+    restart: unless-stopped
     networks:
       - frontend
       - backend
@@ -2663,7 +2663,7 @@ services:
       "
     tty: true # 等价于 -t 参数
     stdin_open: true # 等价于 -i 参数
-    restart: always
+    restart: unless-stopped
     networks:
       - frontend
       - backend
@@ -2673,7 +2673,7 @@ services:
     mem_limit: 400m
     image: tdengine/tdengine:${TDENGINE_VERSION:-latest}  # 使用最新版本的TDengine镜像
     container_name: tdengine_server   # 容器名称
-    restart: always                   # 总是重启容器
+    restart: unless-stopped                   # 总是重启容器
     environment:
       - TAOS_FQDN=tdengine            # 设置TDengine的完全限定域名
       - TDENGINE_USER=${TDENGINE_USER:-root}
@@ -2744,7 +2744,7 @@ services:
     container_name: rocketmq-dashboard
     ports:
       - 8070:8080
-    restart: always
+    restart: unless-stopped
     # privileged: true
     userns_mode: "host"
     networks:
@@ -2764,7 +2764,7 @@ services:
       - IPC_LOCK
     environment:
       VAULT_LOCAL_CONFIG: '{"storage": {"file": {"path": "/vault/file"}}, "listener": [{"tcp": { "address": "0.0.0.0:8300", "tls_disable": true}}], "default_lease_ttl": "168h", "max_lease_ttl": "7200h", "ui": true}'
-    restart: always
+    restart: unless-stopped
     ports:
       - 8300:8300
     command: server
@@ -2934,7 +2934,7 @@ services:
     mem_limit: 300m
     image: bde2020/hadoop-namenode:${HADOOP_VERSION:-2.0.0-hadoop3.2.1-java8}
     container_name: hadoop-namenode
-    restart: always
+    restart: unless-stopped
     ports:
       - "${HADOOP_NAMENODE_WEB_PORT:-9870}:9870"
       - "${HADOOP_NAMENODE_PORT:-9000}:9000"
@@ -2960,7 +2960,7 @@ services:
     mem_limit: 300m
     image: bde2020/hadoop-datanode:${HADOOP_VERSION:-2.0.0-hadoop3.2.1-java8}
     container_name: hadoop-datanode
-    restart: always
+    restart: unless-stopped
     volumes:
       - ${DATA_PATH_HOST}/hadoop/datanode:/hadoop/dfs/data
       - ${APP_CODE_PATH_HOST}:${APP_CODE_PATH_CONTAINER}${APP_CODE_CONTAINER_FLAG}
@@ -2984,7 +2984,7 @@ services:
     mem_limit: 300m
     image: bde2020/hadoop-resourcemanager:${HADOOP_VERSION:-2.0.0-hadoop3.2.1-java8}
     container_name: hadoop-resourcemanager
-    restart: always
+    restart: unless-stopped
     ports:
       - "${HADOOP_RESOURCEMANAGER_WEB_PORT:-8088}:8088"
     environment:
@@ -3016,7 +3016,7 @@ services:
     mem_limit: 300m
     image: bde2020/hadoop-nodemanager:${HADOOP_VERSION:-2.0.0-hadoop3.2.1-java8}
     container_name: hadoop-nodemanager
-    restart: always
+    restart: unless-stopped
     environment:
       - SERVICE_PRECONDITION=hadoop-namenode:9000 hadoop-namenode:9870 hadoop-datanode:9864 hadoop-resourcemanager:8088
       - CORE_CONF_fs_defaultFS=hdfs://hadoop-namenode:9000
@@ -3049,7 +3049,7 @@ services:
     mem_limit: 300m
     image: eclipse-mosquitto:${MQTT_VERSION:-latest}
     container_name: mqtt-broker
-    restart: always
+    restart: unless-stopped
     ports:
       - "${MQTT_PORT:-1883}:1883"
       - "${MQTT_WS_PORT:-9001}:9001"
@@ -3064,7 +3064,7 @@ services:
   rustfs: # replace minio
     image: rustfs/rustfs:latest  # 使用官方 RustFS 镜像
     container_name: rustfs  # 容器名称，与文档示例保持一致
-    restart: always  # 服务故障时自动重启，增强稳定性
+    restart: unless-stopped  # 服务故障时自动重启，增强稳定性
     ports:
       - "${RUSTFS_PORT:-9000}:9000"  # 映射宿主机 9000 端口到容器，与文档默认端口一致
     volumes:
@@ -3093,7 +3093,7 @@ services:
   ### typesense ###################
   typesense: # [search]
     image: typesense/typesense:0.25.2
-    restart: always
+    restart: unless-stopped
     ports:
       - "8108:8108"
     volumes:
@@ -3104,7 +3104,7 @@ services:
       - frontend
   ### vespa 单节点 ###################
   vespa: # [search]
-    restart: always
+    restart: unless-stopped
     image: vespaengine/vespa  
     container_name: vespa
     hostname: vespa-container
@@ -3246,7 +3246,7 @@ services:
   qdrant: # [search][向量]
     image: qdrant/qdrant:${QDRANT_VERSION:-latest}
     container_name: qdrant
-    restart: always
+    restart: unless-stopped
     ports:
       - "6333:6333"  # REST API
       - "6334:6334"  # gRPC API
@@ -3278,7 +3278,7 @@ services:
   xxljob: # [任务调度]
     image: xuxueli/xxl-job-admin:${XXLJOB_VERSION:-2.3.1}
     container_name: laradock-xxljob
-    restart: always
+    restart: unless-stopped
     ports:
       - "${XXLJOB_PORT:-8800}:8080"
     environment:
@@ -3294,7 +3294,7 @@ services:
   etcd:
     image: quay.io/coreos/etcd:${ETCD_VERSION:-latest}
     container_name: milvus-etcd
-    restart: always
+    restart: unless-stopped
     environment:
       - ETCD_AUTO_COMPACTION_MODE=revision
       - ETCD_AUTO_COMPACTION_RETENTION=1000
@@ -3314,7 +3314,7 @@ services:
   milvus-standalone: # [search][向量]
     image: milvusdb/milvus:${MILVUS_VERSION:-latest}
     container_name: milvus-standalone
-    restart: always
+    restart: unless-stopped
     command: ["milvus", "run", "standalone"]
     security_opt:
       - seccomp:unconfined
@@ -3345,7 +3345,7 @@ services:
   milvus-attu:
     image: zilliz/attu:${ATTU_VERSION:-latest}
     container_name: milvus-attu
-    restart: always
+    restart: unless-stopped
     environment:
       MILVUS_URL: milvus-standalone:19530
     ports:
@@ -3358,7 +3358,7 @@ services:
   postgres-vector: # [TODO]
     image: pgvector/pgvector:${PGVECOR_VERSION:-pg16}
     container_name: postgres-vector
-    restart: always
+    restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -3444,7 +3444,7 @@ services:
   weaviate-console:
     image: semitechnologies/weaviate-console:${WEAVIATE_CONSOLE_VERSION:-latest}
     container_name: weaviate-console
-    restart: always
+    restart: unless-stopped
     ports:
       - "8081:80"
     environment:
