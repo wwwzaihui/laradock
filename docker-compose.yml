@@ -56,6 +56,8 @@ volumes:
     driver: ${VOLUMES_DRIVER}
   xxljob:
     driver: ${VOLUMES_DRIVER}
+  libsql:
+    driver: ${VOLUMES_DRIVER}
   # flink:
   #   driver: ${VOLUMES_DRIVER}
   # spark:
@@ -823,9 +825,61 @@ services:
       - POSTGRES_CONFLUENCE_INIT=${CONFLUENCE_POSTGRES_INIT}
       - POSTGRES_CONFLUENCE_DB=${CONFLUENCE_POSTGRES_DB}
       - POSTGRES_CONFLUENCE_USER=${CONFLUENCE_POSTGRES_USER}
-      - POSTGRES_CONFLUENCE_PASSWORD=${CONFLUENCE_POSTGRES_PASSWORD}
+      - POSTGRES_CONFLUENCE_PASSWORD=${CONFLUENCE_POSTGRES_PASSWORD}  
     networks:
       - backend
+  timescaledb:
+    image: timescale/timescaledb:latest-pg18
+    container_name: timescaledb
+    restart: always
+    ports:
+      - "${PG_PORT}:5432"
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - PGDATA=${PGDATA:-/var/lib/postgresql/data }
+      - TZ=${TZ:-Asia/Shanghai}
+    volumes:
+      # 持久化数据到宿主机 ./data
+      - ${DATA_PATH_HOST}/timescaledb/data:/var/lib/postgresql/data
+    # 资源限制（可选，根据机器调整）
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+    # 优化共享内存，时序场景必备
+    shm_size: 2g
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  ### questdb PostgreSQL ###########################################
+  questdb:
+    image: questdb/questdb
+    container_name: custom_questdb
+    restart: always
+    ports:
+      - "${QDB_PG_PORT:-8812}:8812"
+      - "${QDB_HTTP_PORT:-9000}:9000"
+      - "${QDB_NATIVE_PORT:-9009}:9009"
+      - "${QDB_TS_PORT:-9003}:9003"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - QDB_PG_USER=${QDB_PG_USER}
+      - QDB_PG_PASSWORD=${QDB_PG_PASSWORD}
+    volumes:
+      - ${DATA_PATH_HOST}/questdb/questdb_root:/var/lib/questdb/
+    networks:
+      - backend
+    ulimits:
+      nofile:
+        soft: 1048576
+        hard: 1048576
+
   ### pgbackups PostgreSQL ###########################################
   pgbackups:
     image: prodrigestivill/postgres-backup-local
@@ -2518,6 +2572,10 @@ services:
     restart: always
     environment:
       - TZ=${WORKSPACE_TIMEZONE}
+      - KVROCKS_BIND=0.0.0.0
+      - KVROCKS_PORT=6666
+      - KVROCKS_REQUIREPASS=${KVROCKS_PASSWORD:-123456}
+      - KVROCKS_LOG_LEVEL=info
     ports:
       - ${KVROCKS_PORT:-6666}:6666
     volumes:
@@ -3466,4 +3524,51 @@ services:
     extra_hosts:
       - "dockerhost:${DOCKER_HOST_IP}"
     # restart: unless-stopped
-    restart: always
+    restart: unless-stopped
+  maxkb:
+    image: registry.fit2cloud.com/maxkb/maxkb:v1
+    container_name: maxkb
+    restart: unless-stopped
+    ports:
+      - "${MAXKB_PORT}:8080"  # 端口映射（与原命令一致）
+    volumes:
+      - ${DATA_PATH_HOST}/maxkb/data:/var/lib/postgresql/data
+      - ${DATA_PATH_HOST}/maxkb/python-packages:/opt/maxkb/app/sandbox/python-packages
+  open-webui:
+    image: openwebui/open-webui:${OPENWEBUI_VERSION}
+    container_name: open-webui
+    restart: unless-stopped
+    ports:
+      - "${OPENWEBUI_PORT}:8080"
+    environment:
+      - WEBUI_SECRET_KEY=${OPENWEBUI_SECRET_KEY}
+      - DEFAULT_MODELS=${OPENWEBUI_DEFAULT_MODELS}
+      - ENABLE_SIGNUP=${OPENWEBUI_ENABLE_SIGNUP}
+      - ENABLE_OAUTH_SIGNUP=${OPENWEBUI_ENABLE_OAUTH_SIGNUP}
+    volumes:
+      - ${DATA_PATH_HOST}/open_webui/data:/app/backend/data
+
+  ### libSQL Server ##########################################
+  # libsql:
+  #   image: ghcr.io/tursodatabase/libsql-server:${LIBSQL_VERSION:-latest}
+  #   container_name: laradock-libsql
+  #   restart: unless-stopped
+  #   environment:
+  #     - SQLD_HTTP_LISTEN_ADDR=${LIBSQL_HTTP_LISTEN_ADDR}
+  #     - SQLD_DB_PATH=${LIBSQL_DB_PATH}
+  #     - SQLD_HTTP_AUTH_KEY=${LIBSQL_HTTP_AUTH_KEY}
+  #     - SQLD_ENABLE_HTTP_FRACTIONAL_RESP=${LIBSQL_ENABLE_HTTP_FRACTIONAL_RESP}
+  #     - SQLD_MAX_CONCURRENT_CONNECTIONS=${LIBSQL_MAX_CONCURRENT_CONNECTIONS}
+  #     - SQLD_SNI_HOSTNAME=${LIBSQL_SNI_HOSTNAME}
+  #     - SQLD_TLS_ACME_CONTACT_EMAIL=${LIBSQL_TLS_ACME_CONTACT_EMAIL}
+  #     - SQLD_TLS_ACME_DIRECTORY_URL=${LIBSQL_TLS_ACME_DIRECTORY_URL}
+  #     - RUST_LOG=${LIBSQL_LOG_LEVEL}
+  #   volumes:
+  #     - libsql:/var/lib/sqld
+  #   ports:
+  #     - "${LIBSQL_HTTP_PORT}:${LIBSQL_HTTP_PORT_CONTAINER:-8080}"
+  #   networks:
+  #     - backend
+  #   extra_hosts:
+  #     - "dockerhost:${DOCKER_HOST_IP}"
+
