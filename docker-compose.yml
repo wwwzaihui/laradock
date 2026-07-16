@@ -830,7 +830,6 @@ services:
       - backend
   timescaledb:
     image: timescale/timescaledb:latest-pg18
-    container_name: timescaledb
     restart: unless-stopped
     ports:
       - "${TIMESCALELEDB_PORT:-5432}:5432"
@@ -838,7 +837,7 @@ services:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=${POSTGRES_DB}
-      - PGDATA=${PGDATA:-/var/lib/postgresql/data }
+      - PGDATA=${PGDATA:-/var/lib/postgresql/data}
       - TZ=${TZ:-Asia/Shanghai}
     volumes:
       # 持久化数据到宿主机 ./data
@@ -967,11 +966,8 @@ services:
 
   ### ClickHouse #############################################
   clickhouse:
-    build:
-      context: ./clickhouse
-      args:
-        - CLICKHOUSE_VERSION=${CLICKHOUSE_VERSION}
-        - CLICKHOUSE_GOSU_VERSION=${CLICKHOUSE_GOSU_VERSION}
+    image: ${CLICKHOUSE_IMAGE:-clickhouse/clickhouse-server:head}
+    restart: unless-stopped
     environment:
       - CLICKHOUSE_USER=${CLICKHOUSE_USER}
       - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD}
@@ -981,8 +977,8 @@ services:
       - ${CLICKHOUSE_USERS_CUSTOM_CONFIG}:/etc/clickhouse-server/users.xml
       - ${CLICKHOUSE_HOST_LOG_PATH}:/var/log/clickhouse
       - ${CLICKHOUSE_ENTRYPOINT_INITDB}:/docker-entrypoint-initdb.d
-    links:
-      - workspace
+    # links:
+    #   - workspace
     ports:
       - "${CLICKHOUSE_HTTP_PORT}:8123"
       - "${CLICKHOUSE_CLIENT_PORT}:9000"
@@ -1866,7 +1862,7 @@ services:
     image: docker:20.10-dind
     environment:
       DOCKER_TLS_SAN: DNS:docker-in-docker
-    # privileged: true
+    privileged: true
     userns_mode: "host"
     volumes:
       - ${APP_CODE_PATH_HOST}:${APP_CODE_PATH_CONTAINER}
@@ -3571,4 +3567,3 @@ services:
   #     - backend
   #   extra_hosts:
   #     - "dockerhost:${DOCKER_HOST_IP}"
-
